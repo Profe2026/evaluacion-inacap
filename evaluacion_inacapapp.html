@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evaluaciones INACAP – David Chávez</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#0d0f14;--surface:#161a22;--surface2:#1e2330;--border:#2a3040;
+  --accent:#e63946;--accent2:#f4a261;--ok:#2dc653;--warn:#f4a261;--fail:#e63946;
+  --blue:#4ea8de;--purple:#9b72cf;--text:#e8ecf0;--muted:#6b7894;
+  --mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;}
+
+.header{background:var(--surface);border-bottom:2px solid var(--accent);padding:14px 22px;position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.header-title{flex:1;}
+.header-title h1{font-size:.9rem;font-weight:800;letter-spacing:.04em;}
+.header-title p{font-size:.65rem;color:var(--muted);font-family:var(--mono);margin-top:2px;}
+.badge{background:var(--accent);color:#fff;font-family:var(--mono);font-size:.6rem;font-weight:700;padding:3px 8px;border-radius:4px;}
+
+.eval-tabs{background:var(--surface2);border-bottom:1px solid var(--border);padding:10px 22px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.eval-tab{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:.7rem;padding:6px 14px;border-radius:20px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.eval-tab:hover{border-color:var(--accent2);color:var(--accent2);}
+.eval-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;}
+
+.student-bar{background:var(--bg);border-bottom:1px solid var(--border);padding:9px 22px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+.student-bar label{font-family:var(--mono);font-size:.68rem;color:var(--muted);white-space:nowrap;}
+.student-bar select{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:.76rem;padding:5px 9px;border-radius:6px;outline:none;}
+.bar-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:.68rem;padding:5px 10px;border-radius:6px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.bar-btn:hover{border-color:var(--text);color:var(--text);}
+.bar-btn.accent{border-color:var(--accent2);color:var(--accent2);}
+.bar-btn.accent:hover{background:var(--accent2);color:var(--bg);}
+
+.score-strip{background:var(--surface);border-bottom:1px solid var(--border);padding:9px 22px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.sv{text-align:center;}
+.sv .val{font-family:var(--mono);font-size:1.25rem;font-weight:700;line-height:1;}
+.sv .lbl{font-size:.58rem;color:var(--muted);font-family:var(--mono);margin-top:2px;text-transform:uppercase;letter-spacing:.06em;}
+.nota-big{font-size:1.65rem!important;}
+.c-ok{color:var(--ok);}.c-fail{color:var(--fail);}.c-warn{color:var(--warn);}.c-blue{color:var(--blue);}
+.pbw{flex:1;min-width:130px;}
+.pbg{background:var(--border);border-radius:4px;height:7px;overflow:hidden;}
+.pbf{height:100%;border-radius:4px;transition:width .3s,background .3s;}
+.rst-btn{margin-left:auto;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:.64rem;padding:5px 9px;border-radius:5px;cursor:pointer;transition:all .15s;}
+.rst-btn:hover{border-color:var(--fail);color:var(--fail);}
+
+.main{padding:16px 22px 40px;max-width:880px;margin:0 auto;}
+.cg{margin-bottom:18px;}
+.ch{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
+.ctag{background:var(--accent);color:#fff;font-family:var(--mono);font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:4px;white-space:nowrap;}
+.cname{font-size:.73rem;color:var(--muted);font-family:var(--mono);flex:1;}
+.cprog{font-family:var(--mono);font-size:.65rem;color:var(--accent2);}
+.ind{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:5px;display:flex;align-items:flex-start;gap:10px;transition:border-color .15s,background .15s;}
+.ind.ok{border-color:var(--ok);background:rgba(45,198,83,.07);}
+.ind.no{border-color:var(--fail);background:rgba(230,57,70,.05);}
+.ind-meta{flex:1;}
+.ind-num{font-family:var(--mono);font-size:.6rem;color:var(--muted);margin-bottom:3px;font-weight:700;letter-spacing:.06em;}
+.ind-txt{font-size:.78rem;line-height:1.45;}
+.sino-wrap{display:flex;gap:5px;flex-shrink:0;margin-top:1px;}
+.sb{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:.65rem;font-weight:700;padding:4px 10px;border-radius:5px;cursor:pointer;transition:all .15s;}
+.sb.si:hover,.sb.si.on{background:var(--ok);border-color:var(--ok);color:#000;}
+.sb.no:hover,.sb.no.on{background:var(--fail);border-color:var(--fail);color:#fff;}
+.esc-wrap{display:flex;gap:5px;flex-shrink:0;margin-top:1px;flex-direction:column;align-items:flex-end;}
+.eb{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:.6rem;padding:3px 8px;border-radius:5px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.eb:hover{border-color:var(--accent2);color:var(--accent2);}
+.eb.exc.on{background:var(--ok);border-color:var(--ok);color:#000;}
+.eb.bue.on{background:var(--accent2);border-color:var(--accent2);color:#000;}
+.eb.ins.on{background:var(--fail);border-color:var(--fail);color:#fff;}
+
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:9px 22px;display:flex;gap:7px;justify-content:flex-end;flex-wrap:wrap;align-items:center;}
+.btn-p{background:var(--accent);color:#fff;border:none;font-family:var(--mono);font-size:.72rem;font-weight:700;padding:8px 16px;border-radius:7px;cursor:pointer;transition:opacity .15s;}
+.btn-p:hover{opacity:.85;}
+.btn-s{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:.72rem;padding:8px 14px;border-radius:7px;cursor:pointer;transition:all .15s;}
+.btn-s:hover{border-color:var(--text);color:var(--text);}
+.btn-qr{background:linear-gradient(135deg,#6a4c93,var(--purple));color:#fff;border:none;font-family:var(--mono);font-size:.72rem;font-weight:700;padding:8px 18px;border-radius:7px;cursor:pointer;transition:opacity .15s;}
+.btn-qr:hover{opacity:.85;}
+
+/* MODALES */
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);z-index:200;align-items:center;justify-content:center;padding:16px;}
+.mo.open{display:flex;}
+.md{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;width:100%;max-width:560px;max-height:94vh;overflow-y:auto;}
+.md h2{font-size:1rem;font-weight:800;margin-bottom:3px;}
+.md .sub{font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-bottom:16px;}
+.ma{display:flex;gap:7px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap;}
+
+/* QR MODAL */
+.qr-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;width:100%;max-width:360px;text-align:center;}
+.qr-alumno{font-size:1rem;font-weight:800;color:var(--accent2);font-family:var(--mono);margin-bottom:2px;}
+.qr-eval{font-size:.62rem;color:var(--muted);font-family:var(--mono);margin-bottom:14px;}
+.nota-pill{display:inline-flex;align-items:center;gap:12px;padding:10px 20px;border-radius:12px;margin-bottom:16px;border:2px solid;}
+.nota-pill .nn{font-family:var(--mono);font-size:2.2rem;font-weight:700;line-height:1;}
+.nota-pill .ni{text-align:left;}
+.nota-pill .ne{font-family:var(--mono);font-size:.85rem;font-weight:700;}
+.nota-pill .nd{font-family:var(--mono);font-size:.6rem;opacity:.8;}
+/* QR container */
+.qr-container{background:#fff;border-radius:12px;padding:12px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;min-width:180px;min-height:180px;}
+.qr-instruc{background:rgba(155,114,207,.1);border:1px solid rgba(155,114,207,.3);border-radius:10px;padding:12px 14px;margin-bottom:14px;text-align:left;}
+.qr-instruc p{font-size:.72rem;line-height:1.6;color:var(--text);}
+.qr-instruc strong{color:var(--accent2);}
+.ver-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:14px;}
+.ver-lbl{font-family:var(--mono);font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px;}
+.ver-code{font-family:var(--mono);font-size:1.3rem;font-weight:700;color:var(--accent2);letter-spacing:.2em;}
+.qr-btns{display:flex;gap:8px;justify-content:center;}
+
+/* RESUMEN */
+.nbox{background:var(--bg);border-radius:10px;padding:14px;text-align:center;margin-bottom:14px;border:2px solid var(--border);}
+.nbox .nb{font-family:var(--mono);font-size:2.8rem;font-weight:700;line-height:1;margin-bottom:4px;}
+.nbox p{font-size:.7rem;color:var(--muted);font-family:var(--mono);}
+.rrow{display:flex;align-items:flex-start;gap:9px;padding:6px 0;border-bottom:1px solid var(--border);font-size:.76rem;}
+.rrow:last-child{border-bottom:none;}
+.rn{font-family:var(--mono);font-size:.6rem;color:var(--muted);width:26px;flex-shrink:0;margin-top:2px;}
+.rt{flex:1;line-height:1.4;}
+.egrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px;}
+.ebtn2{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:.65rem;padding:11px 7px;border-radius:8px;cursor:pointer;text-align:center;transition:all .15s;line-height:1.5;}
+.ebtn2:hover{border-color:var(--accent2);color:var(--accent2);}
+.ebtn2 .ei{font-size:1.3rem;display:block;margin-bottom:4px;}
+.ebtn2 .eh{font-size:.55rem;color:var(--muted);display:block;}
+.ebtn2.copied{border-color:var(--ok);color:var(--ok);}
+
+/* ADD / BULK */
+.add-inp{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:.85rem;padding:8px 12px;border-radius:8px;outline:none;margin-bottom:12px;}
+.add-inp:focus{border-color:var(--accent2);}
+.bta{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:.76rem;padding:9px 11px;border-radius:8px;outline:none;resize:vertical;min-height:140px;margin-bottom:9px;line-height:1.7;}
+.bta:focus{border-color:var(--accent2);}
+.bhint{font-family:var(--mono);font-size:.63rem;color:var(--muted);margin-bottom:11px;background:var(--surface2);padding:9px 11px;border-radius:6px;border-left:3px solid var(--accent2);line-height:1.7;}
+.bprev{font-family:var(--mono);font-size:.68rem;color:var(--ok);margin-bottom:9px;min-height:16px;}
+
+/* ALL TABLE */
+.atbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.7rem;}
+.atbl th{text-align:left;padding:5px 9px;border-bottom:1px solid var(--border);color:var(--muted);font-weight:400;text-transform:uppercase;font-size:.6rem;letter-spacing:.06em;}
+.atbl td{padding:7px 9px;border-bottom:1px solid var(--border);}
+.atbl tr:hover td{background:var(--surface2);cursor:pointer;}
+.nchip{display:inline-block;padding:2px 6px;border-radius:4px;font-weight:700;font-size:.7rem;}
+.spacer{height:68px;}
+@media(max-width:520px){.main{padding:11px 11px 38px;}.header,.eval-tabs,.student-bar,.score-strip{padding-left:12px;padding-right:12px;}.esc-wrap{flex-direction:row;}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">
+    <h1>Evaluaciones INACAP — Sistemas Operativos / Fundamentos HW&SW</h1>
+    <p>Docente: David Chávez Casanova · QR → resultado directo al celular del alumno</p>
+  </div>
+  <span class="badge">DOCENTE</span>
+</div>
+
+<div class="eval-tabs">
+  <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-right:4px;">EVALUACIÓN:</span>
+  <button class="eval-tab active" onclick="switchEval(0)">📋 Lista de Cotejo N°1 · Win Server 2019</button>
+  <button class="eval-tab" onclick="switchEval(1)">📊 Escala de Apreciación N°2 · Win 10 Pro</button>
+</div>
+
+<div class="student-bar">
+  <label>ALUMNO:</label>
+  <select id="studentSelect" onchange="loadStudent()"><option value="">— Seleccionar —</option></select>
+  <button class="bar-btn accent" onclick="openAdd()">+ Agregar</button>
+  <button class="bar-btn accent" onclick="openBulk()">⬆ Carga masiva</button>
+  <button class="bar-btn" onclick="openAll()">📋 Resumen curso</button>
+</div>
+
+<div class="score-strip">
+  <div class="sv"><div class="val c-blue" id="dPunt">—</div><div class="lbl">Puntaje</div></div>
+  <div class="sv"><div class="val" id="dMax" style="color:var(--muted)">—</div><div class="lbl">Máx</div></div>
+  <div class="sv"><div class="val c-warn" id="dPct">0%</div><div class="lbl">Logro</div></div>
+  <div class="sv"><div class="val nota-big" id="dNota">—</div><div class="lbl">Nota</div></div>
+  <div class="pbw">
+    <div class="pbg"><div class="pbf" id="progBar" style="width:0%;background:var(--fail)"></div></div>
+    <div style="font-family:var(--mono);font-size:.58rem;color:var(--muted);margin-top:4px;">60% = aprobación (nota 4.0)</div>
+  </div>
+  <button class="rst-btn" onclick="resetCur()">↺ Reset</button>
+</div>
+
+<div class="main" id="mainContent">
+  <div style="text-align:center;padding:40px 0;color:var(--muted);font-family:var(--mono);font-size:.8rem;">Selecciona o agrega un alumno para comenzar.</div>
+</div>
+<div class="spacer"></div>
+
+<div class="bottom-bar">
+  <button class="btn-s" onclick="openResumen()">Ver resumen</button>
+  <button class="btn-s" onclick="exportPDF()">⬇ PDF</button>
+  <button class="btn-qr" onclick="openQR()">🔲 Mostrar QR al alumno</button>
+</div>
+
+<!-- ══════ MODAL QR ══════ -->
+<div class="mo" id="moQR">
+  <div class="qr-card">
+    <div style="font-size:.7rem;color:var(--muted);font-family:var(--mono);margin-bottom:6px;">📲 Escanea para ver tu resultado</div>
+    <div class="qr-alumno" id="qrNom">—</div>
+    <div class="qr-eval" id="qrEval">—</div>
+
+    <div class="nota-pill" id="qrPill">
+      <div class="nn" id="qrNN">—</div>
+      <div class="ni"><div class="ne" id="qrNE">—</div><div class="nd" id="qrND">—</div></div>
+    </div>
+
+    <div class="qr-container" id="qrContainer">
+      <span style="font-family:var(--mono);font-size:.7rem;color:#999;">Generando...</span>
+    </div>
+
+    <div class="qr-instruc">
+      <p>
+        <strong>1.</strong> Abre la cámara de tu celular<br>
+        <strong>2.</strong> Enfoca el QR hasta que aparezca el enlace<br>
+        <strong>3.</strong> Toca el enlace → se abre tu resultado<br>
+        <strong>4.</strong> Guarda la página o toma screenshot
+      </p>
+    </div>
+
+    <div class="ver-box">
+      <div class="ver-lbl">Código de verificación</div>
+      <div class="ver-code" id="qrCode">—</div>
+    </div>
+
+    <div class="qr-btns">
+      <button class="btn-s" onclick="closeM('moQR')" style="flex:1;">Cerrar</button>
+      <button class="btn-qr" onclick="dlQR()" style="flex:1;">⬇ Guardar QR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL RESUMEN ══════ -->
+<div class="mo" id="moResumen">
+  <div class="md" style="max-width:640px;">
+    <h2 id="mNom">—</h2><p class="sub" id="mFecha"></p>
+    <div class="nbox"><div class="nb" id="mNota">—</div><p id="mDet"></p></div>
+    <div class="egrid">
+      <button class="ebtn2" onclick="exportPDF()"><span class="ei">🗂</span>Descargar PDF<span class="eh">Para docente</span></button>
+      <button class="ebtn2" id="bCopy" onclick="copyClip()"><span class="ei">📋</span>Copiar TXT<span class="eh">Para pegar en foro</span></button>
+    </div>
+    <div id="mList"></div>
+    <div class="ma"><button class="btn-s" onclick="closeM('moResumen')">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- ══════ MODAL ADD ══════ -->
+<div class="mo" id="moAdd">
+  <div class="md" style="max-width:420px;">
+    <h2>Agregar alumno</h2><p class="sub">Nombre completo</p>
+    <input class="add-inp" id="inpName" placeholder="Ej: Juan Pérez González" onkeydown="if(event.key==='Enter')confirmAdd()">
+    <div class="ma"><button class="btn-s" onclick="closeM('moAdd')">Cancelar</button><button class="btn-p" onclick="confirmAdd()">Agregar →</button></div>
+  </div>
+</div>
+
+<!-- ══════ MODAL BULK ══════ -->
+<div class="mo" id="moBulk">
+  <div class="md" style="max-width:520px;">
+    <h2>Carga masiva de alumnos</h2><p class="sub">Un nombre por línea</p>
+    <div class="bhint">Copia directo desde Excel, Word o el acta de INACAP.<br>Líneas vacías y duplicados se ignoran automáticamente.<br><br><strong style="color:var(--accent2)">Ejemplo:</strong><br>Pérez González Juan<br>Soto Muñoz Valentina</div>
+    <textarea class="bta" id="bulkTA" placeholder="Pega aquí los nombres..." oninput="prevBulk()"></textarea>
+    <div class="bprev" id="bulkPrev"></div>
+    <div style="display:flex;gap:7px;margin-bottom:8px;">
+      <button class="bar-btn" onclick="dedupe()" style="font-size:.62rem;">🧹 Quitar duplicados</button>
+      <button class="bar-btn" onclick="document.getElementById('bulkTA').value='';prevBulk()" style="font-size:.62rem;">✕ Limpiar</button>
+    </div>
+    <div class="ma"><button class="btn-s" onclick="closeM('moBulk')">Cancelar</button><button class="btn-p" onclick="confirmBulk()">Importar →</button></div>
+  </div>
+</div>
+
+<!-- ══════ MODAL ALL ══════ -->
+<div class="mo" id="moAll">
+  <div class="md" style="max-width:700px;">
+    <h2>Resumen general del curso</h2><p class="sub" id="allSub"></p>
+    <div id="allContent"></div>
+    <div class="ma"><button class="btn-s" onclick="closeM('moAll')">Cerrar</button><button class="btn-p" onclick="exportAllTXT()">⬇ Exportar TXT</button></div>
+  </div>
+</div>
+
+<!-- ══════ PÁGINA RESULTADO (iframe oculto para generar HTML del alumno) ══════ -->
+<div id="resultPageTpl" style="display:none;"></div>
+
+<script>
+// ═══════════════════════════════════════
+//  EVALUACIONES
+// ═══════════════════════════════════════
+const EVALS=[
+  {
+    key:'ws',titulo:'Lista de Cotejo N°1',
+    subtitulo:'Despliegue, configuración y gestión de Windows Server 2019',
+    asignatura:'Sistemas Operativos',tipo:'cotejo',
+    criterios:[
+      {id:'2.1.1',nombre:'Instalación y configuración base',indicadores:[
+        {txt:'Instala Windows Server 2019 en VirtualBox con Desktop Experience y contraseña de Administrador válida.',pond:5},
+        {txt:'Configura el hostname y verifica con el comando hostname desde PowerShell.',pond:10},
+        {txt:'Asigna IP estática, máscara y gateway, y verifica conectividad con ping.',pond:10},
+      ]},
+      {id:'2.1.2',nombre:'Active Directory Domain Services',indicadores:[
+        {txt:'Instala el rol AD DS desde Server Manager y autoriza la promoción sin errores.',pond:5},
+        {txt:'Promueve el servidor a Controlador de Dominio creando un nuevo forest.',pond:5},
+        {txt:'Crea una Unidad Organizativa (OU) en ADUC con el nombre requerido.',pond:5},
+        {txt:'Crea los usuarios de dominio con atributos completos y los agrega a un grupo de seguridad.',pond:5},
+      ]},
+      {id:'2.1.3',nombre:'DNS y unión al dominio',indicadores:[
+        {txt:'Configura DNS del cliente apuntando al DC y verifica con nslookup.',pond:5},
+      ]},
+      {id:'2.1.4',nombre:'DHCP, DNS e IIS',indicadores:[
+        {txt:'Instala, autoriza y configura el DHCP con scope, exclusiones y opciones.',pond:5},
+        {txt:'Crea registros DNS tipo A y PTR y verifica resolución con nslookup.',pond:5},
+        {txt:'Instala IIS y publica sitio web accesible por nombre DNS desde el cliente.',pond:10},
+        {txt:'Configura el binding del sitio IIS (hostname, IP, puerto).',pond:10},
+      ]},
+      {id:'2.1.5',nombre:'Verificación de acceso web',indicadores:[
+        {txt:'Verifica ingreso correcto a la web con el nombre de dominio configurado.',pond:10},
+        {txt:'Verifica ingreso correcto a la web en la IP configurada.',pond:10},
+      ]},
+    ],
+    maxPorInd:(p)=>p*4/100,
+    calcNota:(pt)=>{const pc=pt/4;let n=pc<=0?1:pc<0.6?1+(pc/0.6)*3:4+((pc-0.6)/0.4)*3;return Math.min(7,Math.max(1,n));}
+  },
+  {
+    key:'win10',titulo:'Escala de Apreciación N°2',
+    subtitulo:'Instalación y Configuración de Windows 10 Pro',
+    asignatura:'Fundamentos de Hardware y Software',tipo:'escala',
+    escala:[{val:6,label:'Excelente',cls:'exc'},{val:4,label:'Bueno',cls:'bue'},{val:1,label:'Insatisf.',cls:'ins'}],
+    criterios:[
+      {id:'2.1.1',nombre:'Selecciona software y hardware según requerimientos',indicadores:[
+        {txt:'Selecciona correctamente la edición Windows 10 Pro durante la instalación.',pond:6},
+        {txt:'Elige "Instalación personalizada" y selecciona el disco correcto.',pond:3},
+        {txt:'Documenta los valores de hardware verificados antes de instalar.',pond:6},
+      ]},
+      {id:'2.1.2',nombre:'Particiones y formateo de unidades',indicadores:[
+        {txt:'Reduce la partición C: hasta exactamente 30 GB usando diskmgmt.msc.',pond:10},
+        {txt:'Crea segunda partición de 30 GB con formato NTFS y etiqueta "DATOS".',pond:5},
+        {txt:'Activa BitLocker en D: (DATOS) y guarda la clave como "Clave_BitLocker.txt".',pond:10},
+      ]},
+      {id:'2.1.3',nombre:'Cuentas de usuarios y grupos locales',indicadores:[
+        {txt:'Crea los 6 usuarios locales solicitados con contraseña "Inacap2025*".',pond:10},
+        {txt:'Crea el grupo "SUPERVISORES" y agrega a los usuarios requeridos.',pond:5},
+        {txt:'Crea el grupo "TECNICOS" y agrega a los usuarios requeridos.',pond:10},
+        {txt:'Verifica que [alumno] pertenece a "Administradores" y "SUPERVISORES" simultáneamente.',pond:10},
+      ]},
+      {id:'2.1.4',nombre:'Estructura de directorios',indicadores:[
+        {txt:'Crea la carpeta D:\\EMPRESA\\TECNICOS\\ en la unidad DATOS.',pond:5},
+      ]},
+      {id:'2.1.5',nombre:'Copias de seguridad',indicadores:[
+        {txt:'Crea un Punto de Restauración con el nombre: "Config_Evaluacion_04052026".',pond:10},
+      ]},
+      {id:'2.1.6',nombre:'Verificación del sistema operativo',indicadores:[
+        {txt:'Ejecuta Windows Update y documenta el estado actual de actualizaciones.',pond:10},
+      ]},
+    ],
+    maxPorInd:(p)=>p*6/100,
+    calcNota:(pt)=>{const pc=pt/6;let n=pc<=0?1:pc<0.6?1+(pc/0.6)*3:4+((pc-0.6)/0.4)*3;return Math.min(7,Math.max(1,n));}
+  }
+];
+
+// ═══════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════
+let curEval=0,students=JSON.parse(localStorage.getItem('inacap_v6')||'[]'),curStudent=null;
+function save(){localStorage.setItem('inacap_v6',JSON.stringify(students));}
+function getSt(n){return students.find(s=>s.name===n);}
+function makeSt(n){const s={name:n,evals:{},ts:Date.now()};students.push(s);save();return s;}
+function ensureSt(n){return getSt(n)||makeSt(n);}
+function getED(n,ei){const st=ensureSt(n);if(!st.evals[ei])st.evals[ei]={scores:{}};return st.evals[ei];}
+const E=()=>EVALS[curEval];
+function maxTotal(ei){const ev=EVALS[ei];return ev.criterios.reduce((s,c)=>s+c.indicadores.reduce((ss,i)=>ss+ev.maxPorInd(i.pond),0),0);}
+function calcScores(name,ei){
+  const ev=EVALS[ei];const mt=maxTotal(ei);if(!name)return{punt:0,max:mt,pct:0,nota:1.0};
+  const ed=getED(name,ei);let punt=0;
+  ev.criterios.forEach((c,ci)=>c.indicadores.forEach((ind,ii)=>{
+    const sc=ed.scores[`${ci}-${ii}`];
+    if(sc!=null) punt+=ev.tipo==='cotejo'?(sc==='si'?ev.maxPorInd(ind.pond):0):(sc/ev.escala[0].val)*ev.maxPorInd(ind.pond);
+  }));
+  const pct=mt>0?punt/mt:0;
+  return{punt:Math.round(punt*100)/100,max:Math.round(mt*100)/100,pct,nota:ev.calcNota(pct>0?punt:0)};
+}
+
+// ═══════════════════════════════════════
+//  CÓDIGO VERIFICACIÓN (8 chars, sin async)
+// ═══════════════════════════════════════
+function genVerCode(name,ei,nota){
+  // simple hash determinístico sin crypto.subtle
+  const raw=`${name}|${ei}|${nota.toFixed(1)}|${new Date().toDateString()}`;
+  let h=0;
+  for(let i=0;i<raw.length;i++){h=Math.imul(31,h)+raw.charCodeAt(i)|0;}
+  const pos=Math.abs(h).toString(36).toUpperCase().padStart(8,'0');
+  return pos.slice(0,8);
+}
+
+// ═══════════════════════════════════════
+//  HTML RESULTADO PARA EL ALUMNO
+//  (se codifica como data URI en el QR)
+// ═══════════════════════════════════════
+function buildResultHTML(name,ei,code){
+  const ev=EVALS[ei];const{punt,max,pct,nota}=calcScores(name,ei);const ed=getED(name,ei);
+  const ok=nota>=4;const nc=ok?'#2dc653':nota>=3?'#f4a261':'#e63946';
+  let rows='';let gi=0;
+  ev.criterios.forEach((c,ci)=>{
+    rows+=`<tr><td colspan="2" style="background:#1a1a2e;color:#e63946;font-size:11px;font-weight:bold;padding:6px 8px;letter-spacing:.05em">${c.id} — ${c.nombre.toUpperCase()}</td></tr>`;
+    c.indicadores.forEach((ind,ii)=>{
+      gi++;const sc=ed.scores[`${ci}-${ii}`];
+      let badge='—';let bc='#444';let tc='#aaa';
+      if(ev.tipo==='cotejo'){if(sc==='si'){badge='SI ✓';bc='#1a3a1a';tc='#2dc653';}else if(sc==='no'){badge='NO ✗';bc='#3a1a1a';tc='#e63946';}}
+      else{if(sc===6){badge='EXC ★';bc='#1a3a1a';tc='#2dc653';}else if(sc===4){badge='BUE ●';bc='#3a2a0a';tc='#f4a261';}else if(sc===1){badge='INS ✗';bc='#3a1a1a';tc='#e63946';}}
+      rows+=`<tr><td style="padding:5px 8px;font-size:11px;color:#ccc;border-bottom:1px solid #222;line-height:1.4">${String(gi).padStart(2,'0')}. ${ind.txt}<span style="color:#666;margin-left:4px">(${ind.pond}%)</span></td><td style="padding:5px 8px;text-align:center;white-space:nowrap;background:${bc};color:${tc};font-weight:bold;font-size:11px;border-bottom:1px solid #222">${badge}</td></tr>`;
+    });
+  });
+
+  return`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Resultado Evaluación INACAP</title></head><body style="margin:0;padding:16px;background:#0d0f14;color:#e8ecf0;font-family:system-ui,sans-serif;max-width:500px;margin:0 auto">
+<div style="background:#e63946;padding:10px 14px;border-radius:8px 8px 0 0;margin-bottom:0">
+  <div style="color:#fff;font-size:11px;font-weight:bold;letter-spacing:.05em">INACAP · ${ev.asignatura}</div>
+  <div style="color:rgba(255,255,255,.8);font-size:10px">${ev.titulo}</div>
+</div>
+<div style="background:#161a22;border:1px solid #2a3040;border-top:none;border-radius:0 0 8px 8px;padding:14px;margin-bottom:12px">
+  <div style="font-size:13px;font-weight:bold;color:#f4a261;margin-bottom:2px">${name}</div>
+  <div style="font-size:11px;color:#6b7894">${ev.subtitulo}</div>
+  <div style="font-size:10px;color:#6b7894;margin-top:2px">Evaluado: ${new Date().toLocaleDateString('es-CL')}</div>
+</div>
+<div style="background:#161a22;border:2px solid ${nc};border-radius:10px;padding:16px;text-align:center;margin-bottom:12px">
+  <div style="font-size:48px;font-weight:800;color:${nc};line-height:1;font-family:monospace">${nota.toFixed(1)}</div>
+  <div style="font-size:16px;font-weight:bold;color:${nc};margin-top:4px">${ok?'APROBADO ✓':'REPROBADO ✗'}</div>
+  <div style="font-size:11px;color:#6b7894;margin-top:6px">${punt.toFixed(2)} / ${max.toFixed(2)} pts · ${Math.round(pct*100)}% logro</div>
+</div>
+<table style="width:100%;border-collapse:collapse;background:#161a22;border-radius:8px;overflow:hidden;margin-bottom:12px;font-family:monospace">
+  ${rows}
+</table>
+<div style="background:#1e2330;border:1px solid #2a3040;border-radius:8px;padding:10px 14px;text-align:center;margin-bottom:12px">
+  <div style="font-size:9px;color:#6b7894;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Código de verificación</div>
+  <div style="font-size:20px;font-weight:700;color:#f4a261;letter-spacing:.2em;font-family:monospace">${code}</div>
+  <div style="font-size:9px;color:#6b7894;margin-top:4px">Conserva este código como comprobante</div>
+</div>
+<div style="font-size:10px;color:#444;text-align:center">Docente: David Chávez Casanova · INACAP</div>
+<br>
+<button onclick="window.print()" style="width:100%;background:#e63946;color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer">🖨 Guardar / Imprimir PDF</button>
+</body></html>`;
+}
+
+// ═══════════════════════════════════════
+//  MODAL QR
+// ═══════════════════════════════════════
+function openQR(){
+  if(!curStudent){alert('Selecciona un alumno primero.');return;}
+  const ev=E();const{punt,max,pct,nota}=calcScores(curStudent,curEval);
+  const nc=nota>=4?'var(--ok)':nota>=3?'var(--warn)':'var(--fail)';
+  const ncs=nota>=4?'#2dc653':nota>=3?'#f4a261':'#e63946';
+  const code=genVerCode(curStudent,curEval,nota);
+
+  // Llenar cabecera
+  document.getElementById('qrNom').textContent=curStudent;
+  document.getElementById('qrEval').textContent=ev.titulo+' · '+ev.asignatura;
+  document.getElementById('qrNN').textContent=nota.toFixed(1);
+  document.getElementById('qrNN').style.color=ncs;
+  document.getElementById('qrNE').textContent=nota>=4?'APROBADO ✓':'REPROBADO ✗';
+  document.getElementById('qrNE').style.color=ncs;
+  document.getElementById('qrND').textContent=`${punt.toFixed(2)}/${max.toFixed(2)} pts · ${Math.round(pct*100)}%`;
+  const pill=document.getElementById('qrPill');
+  pill.style.borderColor=ncs;pill.style.background=nota>=4?'rgba(45,198,83,.1)':nota>=3?'rgba(244,162,97,.1)':'rgba(230,57,70,.1)';
+  document.getElementById('qrCode').textContent=code;
+
+  // Construir HTML del resultado y generar data URI
+  const html=buildResultHTML(curStudent,curEval,code);
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const dataUrl=URL.createObjectURL(blob);
+
+  // Generar QR con la URL del blob (funciona en el mismo navegador)
+  // Para compartir entre dispositivos usamos un URL corto con los datos en hash
+  // Estrategia: codificar datos mínimos en la URL del archivo mismo
+  const payload=btoa(unescape(encodeURIComponent(JSON.stringify({
+    n:curStudent,ei:curEval,nota:nota.toFixed(1),
+    punt:punt.toFixed(2),max:max.toFixed(2),
+    pct:Math.round(pct*100),code,
+    ev:ev.titulo,asig:ev.asignatura,
+    fecha:new Date().toLocaleDateString('es-CL'),
+    // scores comprimidos: array de valores por índice lineal
+    sc:buildScoreStr(curEval)
+  }))));
+
+  // La URL apunta a este mismo archivo con #r=payload
+  const selfUrl=window.location.href.split('#')[0]+'#r='+payload;
+
+  const container=document.getElementById('qrContainer');
+  container.innerHTML='';
+
+  new QRCode(container,{
+    text: selfUrl,
+    width: 220,
+    height: 220,
+    colorDark:'#000000',
+    colorLight:'#ffffff',
+    correctLevel: QRCode.CorrectLevel.L
+  });
+
+  document.getElementById('moQR').classList.add('open');
+}
+
+function buildScoreStr(ei){
+  // codifica todos los scores como string compacto
+  const ev=EVALS[ei];const ed=getED(curStudent,ei);
+  let s='';
+  ev.criterios.forEach((c,ci)=>c.indicadores.forEach((_,ii)=>{
+    const sc=ed.scores[`${ci}-${ii}`];
+    if(ev.tipo==='cotejo') s+=(sc==='si'?'1':sc==='no'?'0':'.');
+    else s+=(sc===6?'6':sc===4?'4':sc===1?'1':'.');
+  }));
+  return s;
+}
+
+function dlQR(){
+  const canvas=document.querySelector('#qrContainer canvas');
+  if(!canvas){alert('QR no generado.');return;}
+  const a=document.createElement('a');a.href=canvas.toDataURL('image/png');
+  a.download=`QR_${curStudent.replace(/\s+/g,'_')}.png`;a.click();
+}
+
+// ═══════════════════════════════════════
+//  DETECCIÓN: ¿ALUMNO ABRIENDO EL QR?
+// ═══════════════════════════════════════
+function checkResultMode(){
+  const hash=window.location.hash;
+  if(!hash.startsWith('#r='))return;
+  try{
+    const raw=decodeURIComponent(escape(atob(hash.slice(3))));
+    const d=JSON.parse(raw);
+    showResultPage(d);
+  }catch(e){console.error('Error leyendo resultado',e);}
+}
+
+function showResultPage(d){
+  // Reconstruir HTML del resultado desde los datos del QR
+  const ei=d.ei;const ev=EVALS[ei];
+  const nc=parseFloat(d.nota)>=4?'#2dc653':parseFloat(d.nota)>=3?'#f4a261':'#e63946';
+  const ok=parseFloat(d.nota)>=4;
+  let rows='';let gi=0;let si=0;
+  ev.criterios.forEach((c,ci)=>{
+    rows+=`<tr><td colspan="2" style="background:#1a1a2e;color:#e63946;font-size:11px;font-weight:bold;padding:6px 8px;letter-spacing:.05em">${c.id} — ${c.nombre.toUpperCase()}</td></tr>`;
+    c.indicadores.forEach((ind,ii)=>{
+      gi++;const sch=d.sc?d.sc[si++]:'.';
+      let badge='—';let bc='#333';let tc='#888';
+      if(ev.tipo==='cotejo'){if(sch==='1'){badge='SI ✓';bc='#1a3a1a';tc='#2dc653';}else if(sch==='0'){badge='NO ✗';bc='#3a1a1a';tc='#e63946';}}
+      else{if(sch==='6'){badge='EXC ★';bc='#1a3a1a';tc='#2dc653';}else if(sch==='4'){badge='BUE ●';bc='#3a2a0a';tc='#f4a261';}else if(sch==='1'){badge='INS ✗';bc='#3a1a1a';tc='#e63946';}}
+      rows+=`<tr><td style="padding:5px 8px;font-size:11px;color:#ccc;border-bottom:1px solid #222;line-height:1.4">${String(gi).padStart(2,'0')}. ${ind.txt} <span style="color:#555">(${ind.pond}%)</span></td><td style="padding:5px 8px;text-align:center;white-space:nowrap;background:${bc};color:${tc};font-weight:bold;font-size:11px;border-bottom:1px solid #222">${badge}</td></tr>`;
+    });
+  });
+
+  document.body.innerHTML=`<div style="margin:0;padding:16px;background:#0d0f14;color:#e8ecf0;font-family:system-ui,sans-serif;max-width:500px;margin:0 auto;min-height:100vh">
+    <div style="background:#e63946;padding:10px 14px;border-radius:8px 8px 0 0">
+      <div style="color:#fff;font-size:11px;font-weight:bold;letter-spacing:.05em">INACAP · ${d.asig}</div>
+      <div style="color:rgba(255,255,255,.8);font-size:10px">${d.ev}</div>
+    </div>
+    <div style="background:#161a22;border:1px solid #2a3040;border-top:none;border-radius:0 0 8px 8px;padding:14px;margin-bottom:12px">
+      <div style="font-size:14px;font-weight:bold;color:#f4a261;margin-bottom:2px">${d.n}</div>
+      <div style="font-size:10px;color:#6b7894">${ev.subtitulo}</div>
+      <div style="font-size:10px;color:#6b7894;margin-top:2px">Evaluado: ${d.fecha}</div>
+    </div>
+    <div style="background:#161a22;border:2px solid ${nc};border-radius:10px;padding:18px;text-align:center;margin-bottom:12px">
+      <div style="font-size:52px;font-weight:800;color:${nc};line-height:1;font-family:monospace">${d.nota}</div>
+      <div style="font-size:17px;font-weight:bold;color:${nc};margin-top:6px">${ok?'APROBADO ✓':'REPROBADO ✗'}</div>
+      <div style="font-size:11px;color:#6b7894;margin-top:8px">${d.punt} / ${d.max} pts · ${d.pct}% logro</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;background:#161a22;border-radius:8px;overflow:hidden;margin-bottom:12px;font-family:monospace">${rows}</table>
+    <div style="background:#1e2330;border:1px solid #2a3040;border-radius:8px;padding:12px 14px;text-align:center;margin-bottom:14px">
+      <div style="font-size:9px;color:#6b7894;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Código de verificación</div>
+      <div style="font-size:22px;font-weight:700;color:#f4a261;letter-spacing:.22em;font-family:monospace">${d.code}</div>
+      <div style="font-size:9px;color:#6b7894;margin-top:6px">Conserva este código como comprobante de evaluación</div>
+    </div>
+    <div style="font-size:10px;color:#444;text-align:center;margin-bottom:12px">Docente: David Chávez Casanova · INACAP</div>
+    <button onclick="window.print()" style="width:100%;background:#e63946;color:#fff;border:none;padding:14px;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer;margin-bottom:8px">🖨 Guardar como PDF</button>
+    <div style="font-size:9px;color:#444;text-align:center">En iOS: Compartir → Guardar en archivos · En Android: menú → Imprimir → Guardar PDF</div>
+  </div>`;
+  document.title=`Resultado ${d.n} – INACAP`;
+}
+
+// ═══════════════════════════════════════
+//  CHECKLIST RENDER
+// ═══════════════════════════════════════
+function switchEval(idx){curEval=idx;document.querySelectorAll('.eval-tab').forEach((t,i)=>t.classList.toggle('active',i===idx));renderChecklist();updateScores();}
+function rebuildSelect(){
+  const sel=document.getElementById('studentSelect');const prev=sel.value;
+  sel.innerHTML='<option value="">— Seleccionar —</option>';
+  [...students].sort((a,b)=>a.name.localeCompare(b.name)).forEach(s=>{const o=document.createElement('option');o.value=s.name;o.textContent=s.name;sel.appendChild(o);});
+  if(prev)sel.value=prev;
+}
+function loadStudent(){curStudent=document.getElementById('studentSelect').value||null;renderChecklist();updateScores();}
+function renderChecklist(){
+  const m=document.getElementById('mainContent');
+  if(!curStudent){m.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--muted);font-family:var(--mono);font-size:.8rem;">Selecciona o agrega un alumno para comenzar.</div>';return;}
+  const ev=E();const ed=getED(curStudent,curEval);let html='';let gi=0;
+  ev.criterios.forEach((c,ci)=>{
+    const resp=c.indicadores.filter((_,ii)=>ed.scores[`${ci}-${ii}`]!=null).length;
+    html+=`<div class="cg"><div class="ch"><span class="ctag">${c.id}</span><span class="cname">${c.nombre}</span><span class="cprog" id="cp-${ci}">${resp}/${c.indicadores.length}</span></div>`;
+    c.indicadores.forEach((ind,ii)=>{
+      gi++;const k=`${ci}-${ii}`;const sc=ed.scores[k];
+      let rc=ev.tipo==='cotejo'?(sc==='si'?' ok':sc==='no'?' no':''):'';
+      html+=`<div class="ind${rc}" id="row-${ci}-${ii}"><div class="ind-meta"><div class="ind-num">IND ${String(gi).padStart(2,'0')} · Pond. ${ind.pond}%</div><div class="ind-txt">${ind.txt}</div></div>`;
+      if(ev.tipo==='cotejo'){
+        html+=`<div class="sino-wrap"><button class="sb si${sc==='si'?' on':''}" onclick="setScore(${ci},${ii},'si')">SI</button><button class="sb no${sc==='no'?' on':''}" onclick="setScore(${ci},${ii},'no')">NO</button></div>`;
+      }else{
+        html+=`<div class="esc-wrap">`;
+        ev.escala.forEach(e=>{html+=`<button class="eb ${e.cls}${sc===e.val?' on':''}" onclick="setScore(${ci},${ii},${e.val})">${e.label} (${e.val})</button>`;});
+        html+=`</div>`;
+      }
+      html+=`</div>`;
+    });
+    html+=`</div>`;
+  });
+  m.innerHTML=html;
+}
+function setScore(ci,ii,val){
+  if(!curStudent)return;const ed=getED(curStudent,curEval);const k=`${ci}-${ii}`;
+  ed.scores[k]=ed.scores[k]===val?null:val;getSt(curStudent).ts=Date.now();save();
+  const row=document.getElementById(`row-${ci}-${ii}`);const ev=E();const sc=ed.scores[k];
+  if(row){
+    if(ev.tipo==='cotejo'){row.className='ind'+(sc==='si'?' ok':sc==='no'?' no':'');row.querySelectorAll('.sb').forEach(b=>b.classList.toggle('on',(b.classList.contains('si')&&sc==='si')||(b.classList.contains('no')&&sc==='no')));}
+    else{row.querySelectorAll('.eb').forEach(b=>{const bv=parseInt(b.textContent.match(/\d+/)[0]);b.classList.toggle('on',bv===sc);});}
+  }
+  const c=ev.criterios[ci];const resp=c.indicadores.filter((_,ii)=>ed.scores[`${ci}-${ii}`]!=null).length;
+  const el=document.getElementById(`cp-${ci}`);if(el)el.textContent=`${resp}/${c.indicadores.length}`;
+  updateScores();
+}
+function updateScores(){
+  const{punt,max,pct,nota}=calcScores(curStudent,curEval);
+  document.getElementById('dPunt').textContent=curStudent?punt.toFixed(2):'—';
+  document.getElementById('dMax').textContent=max.toFixed(2);
+  document.getElementById('dPct').textContent=Math.round(pct*100)+'%';
+  const nel=document.getElementById('dNota');nel.textContent=curStudent?nota.toFixed(1):'—';
+  nel.className='val nota-big '+(nota>=4?'c-ok':nota>=3?'c-warn':'c-fail');
+  const bar=document.getElementById('progBar');bar.style.width=Math.round(pct*100)+'%';
+  bar.style.background=pct>=0.6?'var(--ok)':pct>=0.4?'var(--warn)':'var(--fail)';
+}
+function resetCur(){if(!curStudent)return;if(!confirm(`¿Resetear ${E().titulo} de ${curStudent}?`))return;const st=getSt(curStudent);if(st){st.evals[curEval]={scores:{}};st.ts=Date.now();save();}renderChecklist();updateScores();}
+
+// ═══════════════════════════════════════
+//  RESUMEN + EXPORT
+// ═══════════════════════════════════════
+function openResumen(){if(!curStudent){alert('Selecciona un alumno.');return;}buildResumen();document.getElementById('moResumen').classList.add('open');}
+function buildResumen(){
+  const ev=E();const{punt,max,pct,nota}=calcScores(curStudent,curEval);const ed=getED(curStudent,curEval);
+  document.getElementById('mNom').textContent=curStudent;
+  document.getElementById('mFecha').textContent=ev.titulo+' · '+new Date().toLocaleString('es-CL');
+  const nel=document.getElementById('mNota');nel.textContent=nota.toFixed(1);nel.className='nb '+(nota>=4?'c-ok':nota>=3?'c-warn':'c-fail');
+  document.getElementById('mDet').textContent=`${punt.toFixed(2)}/${max.toFixed(2)} pts (${Math.round(pct*100)}%) · ${nota>=4?'APROBADO ✓':'REPROBADO ✗'}`;
+  let html='';let gi=0;
+  ev.criterios.forEach((c,ci)=>{
+    html+=`<div style="font-family:var(--mono);font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:9px 0 3px;">${c.id} — ${c.nombre}</div>`;
+    c.indicadores.forEach((ind,ii)=>{gi++;const sc=ed.scores[`${ci}-${ii}`];
+      let badge='⬜';let col='';
+      if(ev.tipo==='cotejo'){if(sc==='si'){badge='✅';col='color:var(--ok)';}else if(sc==='no'){badge='❌';col='color:var(--fail)';}}
+      else{if(sc===6){badge='🟢';col='color:var(--ok)';}else if(sc===4){badge='🟡';col='color:var(--warn)';}else if(sc===1){badge='🔴';col='color:var(--fail)';}}
+      html+=`<div class="rrow"><span class="rn">${String(gi).padStart(2,'0')}</span><span class="rt" style="${col}">${ind.txt}</span><span style="font-size:.85rem">${badge}</span></div>`;
+    });
+  });
+  document.getElementById('mList').innerHTML=html;
+}
+function exportPDF(){
+  if(!curStudent){alert('Selecciona un alumno.');return;}
+  const ev=E();const{punt,max,pct,nota}=calcScores(curStudent,curEval);const ed=getED(curStudent,curEval);
+  const code=genVerCode(curStudent,curEval,nota);
+  const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'p',unit:'mm',format:'a4'});
+  const W=210,ML=15,MR=195,TW=180;let y=12;
+  doc.setFillColor(230,57,70);doc.rect(0,0,W,10,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(8);doc.setFont('helvetica','bold');doc.text(`INACAP · ${ev.asignatura} · ${ev.titulo}`,ML,7);y=17;
+  doc.setTextColor(15,15,15);doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text(ev.subtitulo,ML,y);y+=6;
+  doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(90,90,90);
+  doc.text(`Alumno: ${curStudent}`,ML,y);doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL')}`,MR,y,{align:'right'});y+=4;
+  doc.setDrawColor(220,220,220);doc.line(ML,y,MR,y);y+=5;
+  const nc=nota>=4?[45,198,83]:nota>=3?[244,162,97]:[230,57,70];
+  doc.setFillColor(...nc);doc.roundedRect(ML,y,34,13,2,2,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(16);doc.setFont('helvetica','bold');doc.text(nota.toFixed(1),ML+17,y+9,{align:'center'});
+  doc.setFontSize(6);doc.text('NOTA',ML+17,y+12.5,{align:'center'});
+  doc.setTextColor(15,15,15);doc.setFontSize(10);doc.setFont('helvetica','bold');doc.text(nota>=4?'APROBADO ✓':'REPROBADO ✗',ML+38,y+7);
+  doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(100,100,100);doc.text(`${punt.toFixed(2)}/${max.toFixed(2)} pts · ${Math.round(pct*100)}% logro`,ML+38,y+12);
+  y+=19;let gi=0;
+  ev.criterios.forEach((c,ci)=>{
+    if(y>270){doc.addPage();y=14;}
+    doc.setFillColor(245,245,245);doc.rect(ML,y,TW,6,'F');doc.setDrawColor(220,220,220);doc.rect(ML,y,TW,6,'S');
+    doc.setTextColor(200,50,60);doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.text(`${c.id}  ${c.nombre.toUpperCase()}`,ML+2,y+4.2);y+=7.5;
+    c.indicadores.forEach((ind,ii)=>{
+      gi++;const sc=ed.scores[`${ci}-${ii}`];if(y>276){doc.addPage();y=14;}
+      let bc=[180,180,180];let bl='—';
+      if(ev.tipo==='cotejo'){if(sc==='si'){bc=[45,198,83];bl='SI';}else if(sc==='no'){bc=[230,57,70];bl='NO';}}
+      else{if(sc===6){bc=[45,198,83];bl='EXC';}else if(sc===4){bc=[244,162,97];bl='BUE';}else if(sc===1){bc=[230,57,70];bl='INS';}}
+      doc.setFillColor(...bc);doc.roundedRect(ML,y,8,4.5,0.8,0.8,'F');
+      doc.setTextColor(255,255,255);doc.setFontSize(5.5);doc.setFont('helvetica','bold');doc.text(bl,ML+4,y+3.3,{align:'center'});
+      doc.setTextColor(60,60,60);doc.setFontSize(7);doc.setFont('helvetica','normal');
+      const lines=doc.splitTextToSize(`${String(gi).padStart(2,'0')}. ${ind.txt} (${ind.pond}%)`,TW-12);
+      doc.text(lines,ML+10,y+3.5);y+=lines.length*4+2;
+    });y+=2;
+  });
+  if(y>258){doc.addPage();y=16;}
+  doc.setDrawColor(200,200,200);doc.line(ML,y,MR,y);y+=6;
+  doc.setFillColor(20,20,40);doc.roundedRect(ML,y,TW,10,2,2,'F');
+  doc.setTextColor(255,200,80);doc.setFontSize(7);doc.setFont('helvetica','bold');doc.text('CÓDIGO DE VERIFICACIÓN:',ML+4,y+4.5);
+  doc.setFontSize(11);doc.setTextColor(255,220,80);doc.text(code,ML+4,y+9);
+  doc.setTextColor(160,160,160);doc.setFontSize(6);doc.setFont('helvetica','normal');doc.text('Docente: David Chávez Casanova',MR,y+9,{align:'right'});
+  doc.save(`${ev.key}_${curStudent.replace(/\s+/g,'_')}.pdf`);
+}
+function copyClip(){
+  if(!curStudent){alert('Selecciona un alumno.');return;}
+  const ev=E();const{punt,max,pct,nota}=calcScores(curStudent,curEval);const ed=getED(curStudent,curEval);
+  const S='─'.repeat(56);let t=`${ev.titulo}\n${ev.subtitulo}\n${S}\nAlumno: ${curStudent}\nFecha: ${new Date().toLocaleString('es-CL')}\n${S}\n\n`;
+  let gi=0;ev.criterios.forEach((c,ci)=>{t+=`[${c.id}] ${c.nombre}\n`;c.indicadores.forEach((ind,ii)=>{gi++;const sc=ed.scores[`${ci}-${ii}`];let l=ev.tipo==='cotejo'?(sc==='si'?' SI ':sc==='no'?' NO ':'  — '):(sc===6?' EXC':sc===4?' BUE':sc===1?' INS':'  —');t+=`  ${String(gi).padStart(2,'0')}. [${l}] (${ind.pond}%) ${ind.txt}\n`;});t+='\n';});
+  t+=`${S}\nNota: ${nota.toFixed(1)} · ${nota>=4?'APROBADO':'REPROBADO'} · ${Math.round(pct*100)}%\nCódigo: ${genVerCode(curStudent,curEval,nota)}`;
+  navigator.clipboard.writeText(t).then(()=>{const b=document.getElementById('bCopy');const o=b.innerHTML;b.classList.add('copied');b.innerHTML='<span class="ei">✅</span>¡Copiado!<span class="eh">Pega en el foro</span>';setTimeout(()=>{b.classList.remove('copied');b.innerHTML=o;},2500);}).catch(()=>alert('No se pudo copiar.'));
+}
+
+// ═══════════════════════════════════════
+//  ADD / BULK / ALL
+// ═══════════════════════════════════════
+function closeM(id){document.getElementById(id).classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.mo.open').forEach(m=>m.classList.remove('open'));});
+function openAdd(){document.getElementById('inpName').value='';document.getElementById('moAdd').classList.add('open');setTimeout(()=>document.getElementById('inpName').focus(),100);}
+function confirmAdd(){const n=document.getElementById('inpName').value.trim();if(!n)return;if(getSt(n)){alert('Ya existe.');return;}makeSt(n);rebuildSelect();document.getElementById('studentSelect').value=n;curStudent=n;renderChecklist();updateScores();closeM('moAdd');}
+function openBulk(){document.getElementById('bulkTA').value='';document.getElementById('bulkPrev').textContent='';document.getElementById('moBulk').classList.add('open');}
+function parseNames(raw){return[...new Set(raw.split('\n').map(l=>l.trim()).filter(l=>l.length>1))];}
+function prevBulk(){const ns=parseNames(document.getElementById('bulkTA').value);const ex=ns.filter(n=>getSt(n)).length;document.getElementById('bulkPrev').textContent=ns.length?`✓ ${ns.length} nombre(s) · ${ns.length-ex} nuevo(s) · ${ex} ya existente(s)`:'';}
+function dedupe(){const ta=document.getElementById('bulkTA');ta.value=parseNames(ta.value).join('\n');prevBulk();}
+function confirmBulk(){const ns=parseNames(document.getElementById('bulkTA').value);if(!ns.length){alert('Sin nombres.');return;}let a=0;ns.forEach(n=>{if(!getSt(n)){makeSt(n);a++;}});rebuildSelect();closeM('moBulk');alert(`✓ ${a} importado(s).${ns.length-a>0?`\n${ns.length-a} ya existía(n).`:''}`);}
+function openAll(){
+  document.getElementById('allSub').textContent=`${students.length} alumno(s) · ${E().titulo}`;
+  let html='';
+  if(!students.length){html='<div style="text-align:center;padding:28px;color:var(--muted);font-family:var(--mono);">Sin alumnos.</div>';}
+  else{
+    html='<table class="atbl"><thead><tr><th>#</th><th>Alumno</th><th>Pts</th><th>Logro</th><th>Nota</th></tr></thead><tbody>';
+    [...students].sort((a,b)=>a.name.localeCompare(b.name)).forEach((s,i)=>{
+      const{punt,max,pct,nota}=calcScores(s.name,curEval);const col=nota>=4?'var(--ok)':nota>=3?'var(--warn)':'var(--fail)';
+      html+=`<tr onclick="pickSt('${s.name}')"><td style="color:var(--muted)">${i+1}</td><td>${s.name}</td><td style="font-family:var(--mono)">${punt.toFixed(1)}/${max.toFixed(1)}</td><td style="font-family:var(--mono)">${Math.round(pct*100)}%</td><td><span class="nchip" style="background:${col}20;color:${col};border:1px solid ${col}40">${nota.toFixed(1)}</span></td></tr>`;
+    });html+='</tbody></table>';
+  }
+  document.getElementById('allContent').innerHTML=html;document.getElementById('moAll').classList.add('open');
+}
+function pickSt(name){closeM('moAll');document.getElementById('studentSelect').value=name;curStudent=name;renderChecklist();updateScores();}
+function exportAllTXT(){
+  const ev=E();let t=`RESUMEN — ${ev.titulo}\nFecha: ${new Date().toLocaleString('es-CL')}\n${'═'.repeat(56)}\n\n`;
+  [...students].sort((a,b)=>a.name.localeCompare(b.name)).forEach((s,i)=>{const{punt,max,pct,nota}=calcScores(s.name,curEval);t+=`${i+1}. ${s.name}\n   ${punt.toFixed(2)}/${max.toFixed(2)} pts (${Math.round(pct*100)}%) → Nota ${nota.toFixed(1)} — ${nota>=4?'APROBADO':'REPROBADO'}\n`;});
+  const blob=new Blob([t],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`resumen_${ev.key}.txt`;a.click();
+}
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+checkResultMode(); // ← si el alumno abrió el QR, muestra su resultado
+if(!window.location.hash.startsWith('#r=')){
+  rebuildSelect();updateScores();
+}
+</script>
+</body>
+</html>
